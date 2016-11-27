@@ -2,11 +2,28 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-repositories {
-	jcenter()
-}
+repositories { jcenter() }
 
 dependencies {
 	compile 'org.lwjgl.lwjgl:lwjgl:2.9.3'
 	compile 'org.lwjgl.lwjgl:lwjgl_util:2.9.3'
+}
+
+task copyNatives(type: Copy) {
+	from configurations.compile.files.findAll({it.name.contains 'natives'}).collect {it.isDirectory() ? it : zipTree(it)}
+	into "$project.buildDir/natives"
+	include '*.dll'
+	include '*.so'
+}
+
+eclipseClasspath.dependsOn copyNatives
+eclipse.classpath {
+	file {
+		withXml { xml ->
+			def node = xml.asNode()
+			node.each {
+				it.appendNode('attributes').appendNode('attribute', [name: 'org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY', value: "$project.name/build/natives"])
+			}
+		}
+	}
 }
